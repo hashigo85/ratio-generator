@@ -47,7 +47,6 @@
         #popupSelect { 
             position: absolute; 
             display: none; 
-            /* ★修正: スマホで巨大化しないよう標準の16pxに変更 */
             font-size: 16px; 
             padding: 4px 8px; 
             z-index: 10;
@@ -59,7 +58,6 @@
             margin-top: 12px; 
             display: flex; 
             justify-content: flex-end; 
-            /* ★追加: 高さの違うボタン同士を縦の中央で揃える */
             align-items: center; 
             gap: 10px; 
         }
@@ -73,7 +71,6 @@
             border-radius: 4px; 
             color: white; 
             transition: opacity 0.2s;
-            /* ★追加: 複数行になっても行間が詰まりすぎないように調整 */
             line-height: 1.4; 
         }
         
@@ -123,7 +120,6 @@
         let hoveredCell = { row: null, col: null };
         let selectedCell = { row: null, col: null };
         
-        // ★修正: デフォルトのタイトルを設定
         let chartTitle = "RATIO CHART (10 POINTS)";
 
         baseImage.onerror = () => {
@@ -340,16 +336,8 @@
             this.style.display = "none"; 
         });
 
-        submitBtn.addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.download = 'my_ratio_chart.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-
-            // ★修正: JSで文字を書き換える際も <br> を使用する
-            submitBtn.innerHTML = "作成中<br>(Creating)...";
-            submitBtn.disabled = true;
-
+        // ★追加: データをGASへ送信する共通関数
+        function sendDataToGAS() {
             let exportData = {};
             for (let row = 0; row < GRID_ROWS; row++) {
                 for (let col = 0; col < GRID_COLS; col++) {
@@ -357,13 +345,26 @@
                     exportData[`r${row}_c${col}`] = gridScores[row][col] || "";
                 }
             }
-
-            fetch(GAS_URL, {
+            return fetch(GAS_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(exportData)
-            }).then(() => {
+            });
+        }
+
+        // 作成ボタンの処理
+        submitBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'my_ratio_chart.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+
+            submitBtn.innerHTML = "作成中<br>(Creating)...";
+            submitBtn.disabled = true;
+
+            // ★変更: 共通関数を呼び出す
+            sendDataToGAS().then(() => {
                 submitBtn.innerHTML = "作成完了！";
                 setTimeout(() => {
                     submitBtn.innerHTML = "レシオ表を作成<br>(Create Ratio Chart)";
@@ -376,7 +377,11 @@
             });
         });
 
+        // 共有ボタンの処理
         shareXBtn.addEventListener('click', async () => {
+            // ★追加: 共有ボタンを押した瞬間、裏側でこっそりスプレッドシートへ送信
+            sendDataToGAS().catch(err => console.error("送信エラー:", err));
+
             const tweetText = "私のレシオ表はこちら！\n#アルカプレシオ\n";
             canvas.toBlob(async (blob) => {
                 const file = new File([blob], 'ratio_chart.png', { type: 'image/png' });
