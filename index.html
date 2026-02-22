@@ -74,12 +74,11 @@
             line-height: 1.4; 
         }
         
-        button:hover {
-            opacity: 0.8; 
-        }
-        
+        button:hover { opacity: 0.8; }
         .submit-btn { background-color: #4CAF50; }
         .x-btn { background-color: #000; border: 1px solid #555; }
+        /* リセットボタン用のスタイル */
+        .reset-btn { background-color: #666; font-size: 12px; padding: 8px 16px; margin-top: 20px;}
     </style>
 </head>
 <body>
@@ -100,6 +99,10 @@
         </div>
     </div>
 
+    <div>
+        <button id="resetBtn" class="reset-btn">全ての入力をクリアする</button>
+    </div>
+
     <script>
         const GRID_COLS = 8;
         const GRID_ROWS = 7; 
@@ -111,6 +114,7 @@
         const popupSelect = document.getElementById('popupSelect');
         const submitBtn = document.getElementById('submitBtn');
         const shareXBtn = document.getElementById('shareXBtn');
+        const resetBtn = document.getElementById('resetBtn');
 
         let baseImage = new Image();
         let gridScores = Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill(null));
@@ -119,10 +123,25 @@
         let selectedCell = { row: null, col: null };
         let chartTitle = "RATIO CHART (10 POINTS)";
 
+        // ★履歴の読み込み（保存されていたら上書きする）
+        function loadHistory() {
+            const savedScores = localStorage.getItem('ratio_scores');
+            const savedTitle = localStorage.getItem('ratio_title');
+            if (savedScores) gridScores = JSON.parse(savedScores);
+            if (savedTitle) chartTitle = savedTitle;
+        }
+
+        // ★履歴の保存
+        function saveHistory() {
+            localStorage.setItem('ratio_scores', JSON.stringify(gridScores));
+            localStorage.setItem('ratio_title', chartTitle);
+        }
+
         baseImage.onerror = () => { alert("エラー：ベース画像が見つかりません。"); };
         baseImage.onload = () => {
             canvas.width = baseImage.width;
             canvas.height = baseImage.height;
+            loadHistory(); // ★画像読み込み時に履歴をロード
             drawCanvas();
             if (document.fonts && document.fonts.ready) {
                 document.fonts.ready.then(() => drawCanvas()).catch(() => {});
@@ -210,7 +229,12 @@
             if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return;
             if (row === 0 && col >= 1 && col <= 6) {
                 const newTitle = prompt("タイトルを入力してください", chartTitle);
-                if (newTitle !== null) { chartTitle = newTitle; drawCanvas(); } return;
+                if (newTitle !== null) { 
+                    chartTitle = newTitle; 
+                    saveHistory(); // ★タイトル変更時に保存
+                    drawCanvas(); 
+                } 
+                return;
             }
             activeCell = { row, col }; selectedCell = { row, col }; drawCanvas(); 
             const cw = rect.width / GRID_COLS; const ch = rect.height / GRID_ROWS;
@@ -221,15 +245,25 @@
 
         popupSelect.addEventListener('change', function() {
             if (activeCell.row !== null) gridScores[activeCell.row][activeCell.col] = this.value || null;
-            selectedCell = { row: null, col: null }; drawCanvas(); this.style.display = "none";
+            selectedCell = { row: null, col: null }; 
+            saveHistory(); // ★点数変更時に保存
+            drawCanvas(); 
+            this.style.display = "none";
         });
         popupSelect.addEventListener('blur', function() { selectedCell = { row: null, col: null }; drawCanvas(); this.style.display = "none"; });
 
+        resetBtn.addEventListener('click', () => {
+            if (confirm("全ての入力内容をリセットします。よろしいですか？")) {
+                localStorage.clear();
+                gridScores = Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill(null));
+                chartTitle = "RATIO CHART (10 POINTS)";
+                drawCanvas();
+            }
+        });
+
         submitBtn.addEventListener('click', () => {
-            // 先に画像を保存
             const link = document.createElement('a'); link.download = 'my_ratio_chart.png';
             link.href = canvas.toDataURL('image/png'); link.click();
-
             submitBtn.innerHTML = "作成中<br>(Creating)..."; submitBtn.disabled = true;
             let exportData = {};
             for (let row = 0; row < GRID_ROWS; row++) {
@@ -238,19 +272,15 @@
                     exportData[`r${row}_c${col}`] = gridScores[row][col] || "";
                 }
             }
-
-            // ★修正ポイント：CORSエラーを完全に回避する投げっぱなし方式
             fetch(GAS_URL, {
                 method: 'POST',
-                mode: 'no-cors', // 返事を聞かない（セキュリティ制限に引っかからない）
+                mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(exportData)
             }).then(() => {
-                // 返事がなくても「投げた」時点で成功扱いにして表示を変える
                 submitBtn.innerHTML = "作成完了！";
                 setTimeout(() => { submitBtn.innerHTML = "レシオ表を作成<br>(Create Ratio Chart)"; submitBtn.disabled = false; }, 3000);
             }).catch(() => {
-                // ここに来るのはネットが切れている時くらい
                 submitBtn.innerHTML = "完了(送信済)";
                 setTimeout(() => { submitBtn.innerHTML = "レシオ表を作成<br>(Create Ratio Chart)"; submitBtn.disabled = false; }, 3000);
             });
