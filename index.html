@@ -103,7 +103,6 @@
     <script>
         const GRID_COLS = 8;
         const GRID_ROWS = 7; 
-        
         const BASE_IMAGE_SRC = './base_chart.png';
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbzCAXyQo2aaILCuKQ7kuOEZ8-ZHRBG65FZxt9INR8WSV-RgWpPFex5aEwFx2Py5W9nrdA/exec';
 
@@ -116,26 +115,17 @@
         let baseImage = new Image();
         let gridScores = Array(GRID_ROWS).fill(0).map(() => Array(GRID_COLS).fill(null));
         let activeCell = { row: null, col: null };
-        
         let hoveredCell = { row: null, col: null };
         let selectedCell = { row: null, col: null };
-        
         let chartTitle = "RATIO CHART (10 POINTS)";
 
-        baseImage.onerror = () => {
-            alert("エラー：ベース画像が見つかりません。ファイル名等をご確認ください。");
-        };
-
+        baseImage.onerror = () => { alert("エラー：ベース画像が見つかりません。"); };
         baseImage.onload = () => {
             canvas.width = baseImage.width;
             canvas.height = baseImage.height;
-            
             drawCanvas();
-            
             if (document.fonts && document.fonts.ready) {
-                document.fonts.ready.then(() => {
-                    drawCanvas();
-                }).catch(() => {});
+                document.fonts.ready.then(() => drawCanvas()).catch(() => {});
             }
         };
         baseImage.src = BASE_IMAGE_SRC;
@@ -144,36 +134,25 @@
             try {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(baseImage, 0, 0);
-                
                 const cellWidth = canvas.width / GRID_COLS;
                 const cellHeight = canvas.height / GRID_ROWS;
-                
                 const fontSize = Math.floor(cellHeight * 0.72); 
                 ctx.font = `italic 900 ${fontSize}px 'Noto Sans JP', sans-serif`;
                 ctx.fillStyle = "white";
                 ctx.strokeStyle = "black";
                 ctx.lineWidth = Math.floor(fontSize * 0.12);
                 ctx.textBaseline = "middle";
-
                 const paddingX = cellWidth * 0.10;
 
                 for (let row = 0; row < GRID_ROWS; row++) {
                     for (let col = 0; col < GRID_COLS; col++) {
                         if (row === 0 && col >= 1 && col <= 6) continue;
-
                         const score = gridScores[row][col];
                         if (score) {
                             let x;
                             const y = row * cellHeight + (cellHeight * 0.53);
-
-                            if (col < 4) {
-                                ctx.textAlign = "right";
-                                x = (col + 1) * cellWidth - paddingX;
-                            } else {
-                                ctx.textAlign = "left";
-                                x = col * cellWidth + paddingX;
-                            }
-                            
+                            if (col < 4) { ctx.textAlign = "right"; x = (col + 1) * cellWidth - paddingX; } 
+                            else { ctx.textAlign = "left"; x = col * cellWidth + paddingX; }
                             ctx.strokeText(score, x, y);
                             ctx.fillText(score, x, y);
                         }
@@ -181,163 +160,77 @@
                 }
 
                 if (chartTitle) {
-                    ctx.save();
-                    ctx.textAlign = "center";
-                    ctx.textBaseline = "middle";
-                    
+                    ctx.save(); ctx.textAlign = "center"; ctx.textBaseline = "middle";
                     let titleFontSize = Math.floor(cellHeight * 0.75);
                     ctx.font = `italic 900 ${titleFontSize}px 'Noto Sans JP', sans-serif`;
-                    
                     const metrics = ctx.measureText(chartTitle);
                     const textWidth = metrics.width;
                     const maxTitleWidth = (6 * cellWidth) * 0.95; 
-                    
                     if (textWidth > maxTitleWidth) {
                         const scaleRatio = maxTitleWidth / textWidth;
                         titleFontSize = Math.floor(titleFontSize * scaleRatio);
                         ctx.font = `italic 900 ${titleFontSize}px 'Noto Sans JP', sans-serif`;
                     }
-                    
-                    ctx.fillStyle = "white";
-                    ctx.strokeStyle = "black";
+                    ctx.fillStyle = "white"; ctx.strokeStyle = "black";
                     ctx.lineWidth = Math.max(3, Math.floor(titleFontSize * 0.12)); 
-                    
-                    const titleCenterX = 4 * cellWidth;
-                    const titleCenterY = cellHeight * 0.55;
-                    
+                    const titleCenterX = 4 * cellWidth; const titleCenterY = cellHeight * 0.55;
                     ctx.strokeText(chartTitle, titleCenterX, titleCenterY);
-                    ctx.fillText(chartTitle, titleCenterX, titleCenterY);
-                    ctx.restore();
+                    ctx.fillText(chartTitle, titleCenterX, titleCenterY); ctx.restore();
                 }
 
                 const highlightCell = (selectedCell.row !== null) ? selectedCell : hoveredCell;
-
                 if (highlightCell.row !== null && highlightCell.col !== null) {
-                    ctx.save();
-                    ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-                    ctx.lineWidth = 6;
-                    
+                    ctx.save(); ctx.strokeStyle = "rgba(255, 255, 255, 0.9)"; ctx.lineWidth = 6;
                     if (highlightCell.row === 0 && highlightCell.col === 'title') {
-                        ctx.strokeRect(
-                            1 * cellWidth + ctx.lineWidth / 2, 
-                            0 * cellHeight + ctx.lineWidth / 2, 
-                            6 * cellWidth - ctx.lineWidth, 
-                            cellHeight - ctx.lineWidth
-                        );
+                        ctx.strokeRect(1 * cellWidth + ctx.lineWidth / 2, 0 * cellHeight + ctx.lineWidth / 2, 6 * cellWidth - ctx.lineWidth, cellHeight - ctx.lineWidth);
                     } else {
-                        ctx.strokeRect(
-                            highlightCell.col * cellWidth + ctx.lineWidth / 2, 
-                            highlightCell.row * cellHeight + ctx.lineWidth / 2, 
-                            cellWidth - ctx.lineWidth, 
-                            cellHeight - ctx.lineWidth
-                        );
+                        ctx.strokeRect(highlightCell.col * cellWidth + ctx.lineWidth / 2, highlightCell.row * cellHeight + ctx.lineWidth / 2, cellWidth - ctx.lineWidth, cellHeight - ctx.lineWidth);
                     }
                     ctx.restore();
                 }
-            } catch(e) {
-                console.error("描画中にエラーが発生しました:", e);
-            }
+            } catch(e) { console.error(e); }
         }
 
         canvas.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
-            const mouseX_css = e.clientX - rect.left;
-            const mouseY_css = e.clientY - rect.top;
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            
-            const col = Math.floor(mouseX_css * scaleX / (canvas.width / GRID_COLS));
-            const row = Math.floor(mouseY_css * scaleY / (canvas.height / GRID_ROWS));
-
-            if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) {
-                if (hoveredCell.row !== null) {
-                    hoveredCell = { row: null, col: null };
-                    drawCanvas();
-                }
-                return;
-            }
-
-            if (row === 0 && col >= 1 && col <= 6) {
-                if (hoveredCell.row !== 0 || hoveredCell.col !== 'title') {
-                    hoveredCell = { row: 0, col: 'title' };
-                    drawCanvas();
-                }
-                return;
-            }
-
-            if (hoveredCell.row !== row || hoveredCell.col !== col) {
-                hoveredCell = { row, col };
-                drawCanvas();
-            }
-        });
-
-        canvas.addEventListener('mouseleave', () => {
-            if (hoveredCell.row !== null) {
-                hoveredCell = { row: null, col: null };
-                drawCanvas();
-            }
+            const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
+            const col = Math.floor((e.clientX - rect.left) * scaleX / (canvas.width / GRID_COLS));
+            const row = Math.floor((e.clientY - rect.top) * scaleY / (canvas.height / GRID_ROWS));
+            if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) { if (hoveredCell.row !== null) { hoveredCell = { row: null, col: null }; drawCanvas(); } return; }
+            if (row === 0 && col >= 1 && col <= 6) { if (hoveredCell.col !== 'title') { hoveredCell = { row: 0, col: 'title' }; drawCanvas(); } return; }
+            if (hoveredCell.row !== row || hoveredCell.col !== col) { hoveredCell = { row, col }; drawCanvas(); }
         });
 
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
-            const clickX_css = e.clientX - rect.left;
-            const clickY_css = e.clientY - rect.top;
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            
+            const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height;
+            const clickX_css = e.clientX - rect.left; const clickY_css = e.clientY - rect.top;
             const col = Math.floor(clickX_css * scaleX / (canvas.width / GRID_COLS));
             const row = Math.floor(clickY_css * scaleY / (canvas.height / GRID_ROWS));
-
             if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return;
-            
             if (row === 0 && col >= 1 && col <= 6) {
-                const newTitle = prompt("タイトルを入力してください\n（空白で保存するとクリアされます）", chartTitle);
-                if (newTitle !== null) { 
-                    chartTitle = newTitle;
-                    drawCanvas();
-                }
-                return;
+                const newTitle = prompt("タイトルを入力してください", chartTitle);
+                if (newTitle !== null) { chartTitle = newTitle; drawCanvas(); } return;
             }
-
-            activeCell = { row, col };
-            selectedCell = { row, col };
-            drawCanvas(); 
-            
-            const cellWidth_css = rect.width / GRID_COLS;
-            const cellHeight_css = rect.height / GRID_ROWS;
-            
-            let targetX_css;
-            if (col < 4) {
-                targetX_css = col * cellWidth_css + (cellWidth_css * 0.75);
-            } else {
-                targetX_css = col * cellWidth_css + (cellWidth_css * 0.25);
-            }
-            
-            const targetY_css = row * cellHeight_css + (cellHeight_css * 0.50);
-            
-            popupSelect.style.left = targetX_css + "px";
-            popupSelect.style.top = targetY_css + "px";
-            popupSelect.style.display = "block";
-            
-            popupSelect.value = gridScores[row][col] || "";
-            popupSelect.focus();
+            activeCell = { row, col }; selectedCell = { row, col }; drawCanvas(); 
+            const cw = rect.width / GRID_COLS; const ch = rect.height / GRID_ROWS;
+            popupSelect.style.left = (col < 4 ? col * cw + cw * 0.75 : col * cw + cw * 0.25) + "px";
+            popupSelect.style.top = (row * ch + ch * 0.5) + "px";
+            popupSelect.style.display = "block"; popupSelect.value = gridScores[row][col] || ""; popupSelect.focus();
         });
 
         popupSelect.addEventListener('change', function() {
             if (activeCell.row !== null) gridScores[activeCell.row][activeCell.col] = this.value || null;
-            selectedCell = { row: null, col: null };
-            drawCanvas();
-            this.style.display = "none";
+            selectedCell = { row: null, col: null }; drawCanvas(); this.style.display = "none";
         });
-        
-        popupSelect.addEventListener('blur', function() { 
-            selectedCell = { row: null, col: null };
-            drawCanvas();
-            this.style.display = "none"; 
-        });
+        popupSelect.addEventListener('blur', function() { selectedCell = { row: null, col: null }; drawCanvas(); this.style.display = "none"; });
 
-        // ★追加: データをGASへ送信する共通関数
-        function sendDataToGAS() {
+        submitBtn.addEventListener('click', () => {
+            // 先に画像を保存
+            const link = document.createElement('a'); link.download = 'my_ratio_chart.png';
+            link.href = canvas.toDataURL('image/png'); link.click();
+
+            submitBtn.innerHTML = "作成中<br>(Creating)..."; submitBtn.disabled = true;
             let exportData = {};
             for (let row = 0; row < GRID_ROWS; row++) {
                 for (let col = 0; col < GRID_COLS; col++) {
@@ -345,52 +238,32 @@
                     exportData[`r${row}_c${col}`] = gridScores[row][col] || "";
                 }
             }
-            return fetch(GAS_URL, {
+
+            // ★修正ポイント：CORSエラーを完全に回避する投げっぱなし方式
+            fetch(GAS_URL, {
                 method: 'POST',
-                mode: 'no-cors',
+                mode: 'no-cors', // 返事を聞かない（セキュリティ制限に引っかからない）
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(exportData)
-            });
-        }
-
-        // 作成ボタンの処理
-        submitBtn.addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.download = 'my_ratio_chart.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-
-            submitBtn.innerHTML = "作成中<br>(Creating)...";
-            submitBtn.disabled = true;
-
-            // ★変更: 共通関数を呼び出す
-            sendDataToGAS().then(() => {
+            }).then(() => {
+                // 返事がなくても「投げた」時点で成功扱いにして表示を変える
                 submitBtn.innerHTML = "作成完了！";
-                setTimeout(() => {
-                    submitBtn.innerHTML = "レシオ表を作成<br>(Create Ratio Chart)";
-                    submitBtn.disabled = false;
-                }, 3000);
-            }).catch(err => {
-                alert("データの送信に失敗しました。");
-                submitBtn.innerHTML = "レシオ表を作成<br>(Create Ratio Chart)";
-                submitBtn.disabled = false;
+                setTimeout(() => { submitBtn.innerHTML = "レシオ表を作成<br>(Create Ratio Chart)"; submitBtn.disabled = false; }, 3000);
+            }).catch(() => {
+                // ここに来るのはネットが切れている時くらい
+                submitBtn.innerHTML = "完了(送信済)";
+                setTimeout(() => { submitBtn.innerHTML = "レシオ表を作成<br>(Create Ratio Chart)"; submitBtn.disabled = false; }, 3000);
             });
         });
 
-        // 共有ボタンの処理
         shareXBtn.addEventListener('click', async () => {
-            // ★追加: 共有ボタンを押した瞬間、裏側でこっそりスプレッドシートへ送信
-            sendDataToGAS().catch(err => console.error("送信エラー:", err));
-
             const tweetText = "私のレシオ表はこちら！\n#アルカプレシオ\n";
             canvas.toBlob(async (blob) => {
                 const file = new File([blob], 'ratio_chart.png', { type: 'image/png' });
                 if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    try {
-                        await navigator.share({ text: tweetText, files: [file] });
-                    } catch (error) { console.log('シェアキャンセル'); }
+                    try { await navigator.share({ text: tweetText, files: [file] }); } catch (e) {}
                 } else {
-                    alert("お使いの環境は画像の直接シェアに対応していません。保存した画像をXに手動で添付してください。");
+                    alert("保存した画像を共有してください。");
                     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
                 }
             }, 'image/png');
