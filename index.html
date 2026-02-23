@@ -88,7 +88,7 @@
         <canvas id="chartCanvas"></canvas>
         <select id="popupSelect">
             <option value="">取消</option>
-            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            <option value="0">0</option> <option value="1">1</option><option value="2">2</option><option value="3">3</option>
             <option value="4">4</option><option value="5">5</option><option value="6">6</option>
             <option value="7">7</option><option value="8">8</option><option value="×">×</option>
         </select>
@@ -167,7 +167,9 @@
                     for (let col = 0; col < GRID_COLS; col++) {
                         if (row === 0 && col >= 1 && col <= 6) continue;
                         const score = gridScores[row][col];
-                        if (score) {
+                        
+                        // ★「0」が見えなくなる罠の対策。nullや空文字以外なら描画する。
+                        if (score !== null && score !== "") {
                             let x;
                             const y = row * cellHeight + (cellHeight * 0.53);
                             if (col < 4) { ctx.textAlign = "right"; x = (col + 1) * cellWidth - paddingX; } 
@@ -269,7 +271,10 @@
             for (let row = 0; row < GRID_ROWS; row++) {
                 for (let col = 0; col < GRID_COLS; col++) {
                     if (row === 0 && col >= 1 && col <= 6) continue;
-                    exportData[`r${row}_c${col}`] = gridScores[row][col] || "";
+                    
+                    // ★「0」が送信されない罠の対策。
+                    const val = gridScores[row][col];
+                    exportData[`r${row}_c${col}`] = (val !== null && val !== "") ? val : "";
                 }
             }
             fetch(GAS_URL, {
